@@ -1,0 +1,113 @@
+# fkhost Stabilization and Fix Plan
+
+This implementation plan is an exact reflection of the strict constraints and fixes provided. No new features, redesigns, or modes are introduced. Only fixes and stabilizations of the existing system will be performed.
+
+## User Review Required
+
+> [!IMPORTANT]  
+> Please review this final plan. It mirrors your constraints exactly. Once approved, I will begin execution immediately starting with `tauri.conf.json`.
+
+## Proposed Changes
+
+---
+
+### 1. App Configuration Fix
+**Target**: `tauri.conf.json`
+- Set `productName` to `fkhost`.
+- Set `bundle.identifier` to `com.fkhost.app`.
+- Ensure output is compiled to `fkhost.exe`.
+- Guarantee the window natively supports minimize, maximize, and close operations.
+
+---
+
+### 2. Window Control Fix
+**Target**: `App.tsx` & `App.css`
+- Apply `-webkit-app-region: drag` ONLY to non-interactive titlebar areas.
+- Ensure all interactive elements (buttons, controls) are categorically excluded from the drag layer (`no-drag`).
+- Guarantee window control buttons respond instantly.
+
+---
+
+### 3. Stop Button & Process Safety
+**Target**: `App.tsx` & `src-tauri/src/lib.rs`
+- **Frontend**: Transition "Start Hosting" to "Stop" during active sessions and disable interactions during the `connecting` state.
+- **Backend**: Bind the tunnel process to a single global reference (`Arc<Mutex<Option<Child>>>`).
+- Prevent any duplicate tunnel starts.
+- **Stop Action**: Make the termination safe, fully clear the process state, and make it idempotent (safe to call sequentially).
+- **App Close Handling**: Handle the window close hook to automatically kill the running tunnel and eliminate background zombies.
+
+---
+
+### 4. Custom Domain Integration
+**Target**: `App.tsx` & `src-tauri/src/tunnel_manager.rs`
+- **Frontend** (Production Mode only): Add the domain input overlay, the action trigger, and a visual status indicator.
+- **Backend (No Domain)**: Fallback logic -> `cloudflared tunnel --url ...`
+- **Backend (Domain Provide)**: Execute named tunnel flow. Establish the tunnel only if it doesn't already exist, map the domain, and reuse it permanently on future runs. Assume Cloudflare authentication is externally handled.
+
+---
+
+### 5. Static Folder Serving
+**Target**: `src-tauri/src/lib.rs`
+- If folder mode is targeted, spawn a raw local HTTP server on the designated port to map and serve the directory.
+- Track its separate lifecycle globally. Upon `stop`, sequentially kill the tunnel first, followed by the local server. Release port unconditionally.
+
+---
+
+### 6. Port Handling
+**Target**: `src-tauri/src/lib.rs`
+- Introduce hard network binding testing prior to startup.
+- Stop execution entirely and issue an error if bind fails.
+- Pass the validated port flawlessly downward to either local servers or tunnels. 
+
+---
+
+### 7. Log Panel Stability
+**Target**: `App.tsx`
+- Introduce explicit log filter mappings (`ALL`, `INFO`, `ERROR`).
+- Establish a "Copy logs" event.
+- Supply an `Auto-scroll toggle`.
+- Cap total log array arrays statically (e.g. 500 lines constraint) avoiding DOM thrash.
+
+---
+
+### 8. Dark / Light Mode
+**Target**: `App.tsx`, `App.css`, `index.html`
+- Drive styles globally utilizing `.dark` and `.light` prefixes matching raw variables.
+- Anchor preference in DOM `localStorage`.
+- Execute a synchronous pre-render `<script>` inside `index.html` referencing storage. Default fallback to system heuristics.
+
+---
+
+### 9. Session Persistence
+**Target**: `App.tsx`
+- Synchronize `lastPort`, `lastDomain`, and `lastUrl` to storage upon live connection.
+- During `idle`, surface the cached URL in a "Last Session" component with a rapid copy button.
+
+---
+
+### 10. State Sync & Timeout
+**Target**: `App.tsx`
+- Force pure UI alignment to IPC strings (`connecting`, `live`, `stopped`, `error`).
+- **Timeout Handle**: Bounded timeout inside `connecting` state execution loop. If limit exceeded, drop into `error`. Immediately clear timeouts upon a `live` / `error` / `stopped` condition.
+
+---
+
+### 11. Cloudflared Check
+**Target**: `src-tauri/src/tunnel_manager.rs`
+- Prior to networking spinup, fire a background `--version` probe explicitly failing initialization safely if the local binary doesn't exist.
+
+---
+
+## Open Questions
+
+None. 
+
+## Verification Plan
+
+### Automated Tests
+- Validate executable filename defaults to `fkhost.exe` on successful compile.
+
+### Manual Verification
+- Hard closing the user interface natively and verifying task manager handles are completely dropped.
+- Port-collision validation checks.
+- Visual validation of custom domains, log toggles, theme changes, static server routing, and title-bar click interactions.

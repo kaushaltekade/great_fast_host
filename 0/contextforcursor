@@ -1,0 +1,21 @@
+Here's the accurate status of where things stand:
+
+✅ Done
+#	Feature	Status
+1	App name (fkhost.exe, bundle ID)	✅ Done
+2	Window controls / drag fix	✅ Done
+3	Stop button + global process tracking + graceful shutdown on close	✅ Done
+4	Custom Domain (Named tunnel mode UI + backend)	✅ Done this session
+5	Static folder serving (axum server + folder picker)	✅ Done this session
+6	Port selection + React/Next.js presets	✅ Done this session
+7	Log panel — filter + copy + auto-scroll toggle	✅ Done this session
+10	15s connection timeout + strict IPC state	✅ Done
+11	Cloudflared auto-download + verification	✅ Done
+❌ Still Remaining (4 items)
+#	Feature	What's needed
+6	Port pre-check	Add TcpListener::bind check in lib.rs before starting — fail fast if port is in use
+7	Log history bounds	Cap logs array at e.g. 500 entries in addLog callback
+8	Dark / Light mode toggle	Titlebar toggle button + CSS variables + localStorage persistence + index.html pre-render script to prevent flash
+9	Session persistence	Save last tunnel URL + port to localStorage; show "Last Session" card in idle state
+Want me to knock out all 4 remaining items now? They're all relatively small — the mode toggle and session persistence are the meatiest, but still straightforward.
+
