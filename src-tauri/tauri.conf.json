@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "fkhost",
-  "version": "0.1.0",
-  "identifier": "com.fkhost.app",
+  "productName": "Great Fast Host",
+  "version": "0.4.1",
+  "identifier": "com.greatfasthost.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,10 +12,13 @@
   "app": {
     "windows": [
       {
-        "title": "fkhost · v0.4.1",
+        "label": "main",
+        "title": "Great Fast Host",
         "width": 820,
         "height": 560,
-        "resizable": false,
+        "minWidth": 640,
+        "minHeight": 480,
+        "resizable": true,
         "decorations": false
       }
     ],

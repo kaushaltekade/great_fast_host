@@ -5,6 +5,7 @@ pub mod watchdog;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::net::TcpListener;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::Mutex;
 use tokio::sync::oneshot;
@@ -83,6 +84,12 @@ async fn start_tunnel(app: AppHandle, state: State<'_, AppState>, session_id: St
         }
     }
 
+    // Fail fast before any startup path if the target port is unavailable.
+    if let Err(e) = ensure_port_available(config.port) {
+        emit_error(&app, &session_id, "starting_tunnel", "PORT_IN_USE", &e, false);
+        return Err(e);
+    }
+
     // Stop any existing server just in case
     {
         let mut guard = state.server_shutdown_tx.lock().await;
@@ -126,7 +133,7 @@ async fn start_tunnel(app: AppHandle, state: State<'_, AppState>, session_id: St
     emit_step(&app, &session_id, "starting_tunnel", "done", "Local server running", &format!("Listening on port {}", config.port), "running");
 
     // --- Spawn tunnel process ---
-    let mut tunnel_child = match tunnel_manager::spawn_tunnel(exe_path.clone(), config.port, &config.tunnel_mode, app.clone()).await {
+    let mut tunnel_child = match tunnel_manager::spawn_tunnel(exe_path.clone(), config.port, &config.tunnel_mode).await {
         Ok(c) => c,
         Err(e) => {
             emit_error(&app, &session_id, "starting_tunnel", "SPAWN_FAILED", &e, true);
@@ -147,6 +154,12 @@ async fn start_tunnel(app: AppHandle, state: State<'_, AppState>, session_id: St
     });
 
     Ok(())
+}
+
+fn ensure_port_available(port: u16) -> Result<(), String> {
+    TcpListener::bind(("127.0.0.1", port))
+        .map(|listener| drop(listener))
+        .map_err(|_| format!("Port {} is already in use. Please choose a different port.", port))
 }
 
 #[tauri::command]

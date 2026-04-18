@@ -92,10 +92,6 @@ const nowTs = () => {
   return `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}:${d.getSeconds().toString().padStart(2,"0")}`;
 };
 
-// ─── Demo simulation ──────────────────────────────────────────────────────────
-
-const DEMO_URL = "https://fkhost-demo.trycloudflare.com";
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function App() {
@@ -115,6 +111,9 @@ export default function App() {
     port: 8080
   });
   const [errorInfo, setErrorInfo] = useState<{ title: string; desc: string; code: string } | null>(null);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [notification, setNotification] = useState<{ type: "info" | "warning" | "error"; msg: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const sessionRef = useRef("");
   const stepIdxRef = useRef(-1);
@@ -136,12 +135,26 @@ export default function App() {
     if (logsOpen && autoScroll) logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs, logsOpen, autoScroll]);
 
-  // Load config on mount
+  // Load config & theme on mount
   useEffect(() => {
     invoke<AppConfig>("get_config").then(cfg => {
       setAppConfig(cfg);
     }).catch(() => {});
+    
+    const t = document.documentElement.getAttribute("data-theme") as "dark" | "light" || "dark";
+    setTheme(t);
   }, []);
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("fkhost_theme", next);
+    
+    // Add temporary class for smooth transition across all elements
+    document.body.classList.add("theme-transitioning");
+    setTimeout(() => document.body.classList.remove("theme-transitioning"), 300);
+  };
 
   // Elapsed timer
   useEffect(() => {
@@ -234,63 +247,7 @@ export default function App() {
     };
   }, [addLog]);
 
-  // ── Demo simulation ──────────────────────────────────────────────────────────
-  const runDemo = useCallback(async () => {
-    const sid = crypto.randomUUID();
-    sessionRef.current = sid;
-    stepIdxRef.current = -1;
-    lastProgRef.current = -1;
-    isLockedRef.current = false;
-    setSteps(mkSteps());
-    setLiveUrl("");
-    setElapsed(0);
-    setErrorInfo(null);
-    setSessionId(sid.slice(0, 8) + "…");
-    setStatus("running");
-    addLog("SYS", `Session started · ${sid.slice(0, 8)}`);
-
-    const setStep = (k: StepKey, st: StepStatus, prog = 0) => {
-      setSteps((prev) => ({ ...prev, [k]: { ...prev[k], status: st, progress: prog, startTs: Date.now() / 1000 } }));
-    };
-    const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-    // Steps 0–2 quick
-    for (const k of ["initializing","config_loaded","checking_tunnel"] as StepKey[]) {
-      setStep(k, "active");
-      addLog("INFO", `[${STEP_META[k].label}] ${STEP_META[k].desc}`);
-      await delay(700);
-      setStep(k, "done");
-      addLog("OK", `[${STEP_META[k].label}] complete`);
-    }
-
-    // Step 3: downloading with progress
-    setStep("downloading", "active");
-    addLog("INFO", "Fetching cloudflared · 47 MB");
-    for (let p = 0; p <= 100; p += 4) {
-      await delay(100);
-      setSteps((prev) => ({ ...prev, downloading: { ...prev.downloading, progress: p } }));
-    }
-    setStep("downloading", "done", 100);
-    addLog("OK", "Binary downloaded · 47.2 MB");
-
-    // Steps 4–6
-    for (const k of ["verifying","starting_tunnel","connecting"] as StepKey[]) {
-      setStep(k, "active");
-      addLog("INFO", `[${STEP_META[k].label}] ${STEP_META[k].desc}`);
-      await delay(k === "connecting" ? 900 : 500);
-      setStep(k, "done");
-      addLog("OK", `[${STEP_META[k].label}] complete`);
-    }
-
-    // Live
-    setStep("live", "done");
-    setLiveUrl(DEMO_URL);
-    isLockedRef.current = true;
-    setStatus("completed");
-    addLog("OK", `Tunnel live · ${DEMO_URL}`);
-  }, [addLog]);
-
-  // ── Real start / stop ────────────────────────────────────────────────────────
+  // ── Start / stop ─────────────────────────────────────────────────────────────
   const handleStart = useCallback(async () => {
     const sid = crypto.randomUUID();
     sessionRef.current = sid;
@@ -312,7 +269,7 @@ export default function App() {
       setErrorInfo({ title: String(e), desc: "", code: "INVOKE_ERROR" });
       addLog("ERR", String(e));
     }
-  }, [addLog]);
+  }, [addLog, appConfig]);
 
   const handleStop = useCallback(async () => {
     try { await invoke("stop_tunnel", { sessionId: sessionRef.current }); } catch (_) {}
@@ -320,14 +277,26 @@ export default function App() {
     addLog("SYS", "Session stopped by user");
   }, [addLog]);
 
-  // Detect if Tauri is available
-  const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-
   const handleButton = () => {
-    if (status === "running") {
-      isTauri ? handleStop() : setStatus("idle");
+    if (status === "running" || status === "completed") {
+      handleStop();
     } else {
-      isTauri ? handleStart() : runDemo();
+      // Inline Validation
+      if (appConfig.port < 1 || appConfig.port > 65535) {
+        setNotification({ type: "error", msg: "Invalid port number. Range: 1-65535." });
+        return;
+      }
+      if (appConfig.hosting_type.mode === "Website" && !appConfig.hosting_type.folder) {
+        setNotification({ type: "error", msg: "Please select a static folder to serve." });
+        return;
+      }
+      if (appConfig.tunnel_mode.mode === "Named" && (!appConfig.tunnel_mode.tunnel_id || !appConfig.tunnel_mode.domain)) {
+        setNotification({ type: "error", msg: "Tunnel ID and Domain are required for Custom mode." });
+        return;
+      }
+
+      setNotification(null);
+      handleStart();
     }
   };
 
@@ -336,15 +305,36 @@ export default function App() {
 
   return (
     <div className="root">
+      
+      {notification && (
+        <div className={`notify-bar ${notification.type}`}>
+          <div className="notify-msg">
+            {notification.type === "error" && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
+            {notification.type === "info" && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>}
+            {notification.msg}
+          </div>
+          <button className="notify-dismiss" onClick={() => setNotification(null)}>✕</button>
+        </div>
+      )}
 
       {/* ── Titlebar ── */}
-      <header className="titlebar" data-tauri-drag-region>
-        <div className="tb-left" data-tauri-drag-region>
-          <span className="tb-wordmark">fk<strong>host</strong></span>
-          <span className="tb-version">v0.4.1</span>
+      <header className={`titlebar status-${status}`} data-tauri-drag-region>
+        <div className="tb-main" data-tauri-drag-region>
+          <div className="tb-logo" data-tauri-drag-region>FK</div>
+          <div className="tb-title" data-tauri-drag-region>
+            <span className="tb-status-dot" />
+            {status === "running" ? `Hosting :${appConfig.port}` : "fkhost"}
+            <span className="tb-version">v0.4.1</span>
+          </div>
         </div>
         <div className="tb-right">
-          <StatusPill status={status} />
+          <button className="tb-theme" onClick={toggleTheme} title="Toggle Theme">
+            {theme === "dark" ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="4.22" x2="19.78" y2="5.64"/></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            )}
+          </button>
           <div className="tb-controls">
             <button className="wc wc-min" onClick={() => appWindow.minimize()} title="Minimize">
               <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
@@ -394,40 +384,59 @@ export default function App() {
 
           <div className="cfg-group">
             <span className="cfg-label">Tunnel Mode</span>
-            <select
-              className="host-select"
-              value={appConfig.tunnel_mode.mode}
-              onChange={(e) => setAppConfig(c => ({...c, tunnel_mode: e.target.value === "Quick" ? { mode: "Quick" } : { mode: "Named", tunnel_id: "", domain: "" }}))}
-              disabled={status === "running"}
-            >
-              <option value="Quick">Quick (Random URL)</option>
-              <option value="Named">Custom Domain</option>
-            </select>
+            <div className="tunnel-seg">
+              <button 
+                className={appConfig.tunnel_mode.mode === "Quick" ? "active" : ""} 
+                onClick={() => setAppConfig(c => ({...c, tunnel_mode: { mode: "Quick" }}))}
+                disabled={status === "running"}
+              >
+                Quick
+              </button>
+              <button 
+                className={appConfig.tunnel_mode.mode === "Named" ? "active" : ""} 
+                onClick={() => setAppConfig(c => ({...c, tunnel_mode: { mode: "Named", tunnel_id: "", domain: "" }}))}
+                disabled={status === "running"}
+              >
+                Custom
+              </button>
+            </div>
+            <div className="tunnel-mode-desc">
+              {appConfig.tunnel_mode.mode === "Quick" 
+                ? "Generate a random ephemeral URL (e.g. *.trycloudflare.com)"
+                : "Connect to your own Cloudflare tunnel and custom domain"}
+            </div>
           </div>
 
           {appConfig.tunnel_mode.mode === "Named" && (
             <div className="cfg-sub">
-              <input type="text" className="cfg-input" placeholder="Tunnel UUID" value={appConfig.tunnel_mode.tunnel_id} onChange={e => setAppConfig(c => ({...c, tunnel_mode: { mode: "Named", tunnel_id: e.target.value, domain: (c.tunnel_mode as any).domain }}))} disabled={status === "running"} />
-              <input type="text" className="cfg-input" placeholder="example.com" value={appConfig.tunnel_mode.domain} onChange={e => setAppConfig(c => ({...c, tunnel_mode: { mode: "Named", tunnel_id: (c.tunnel_mode as any).tunnel_id, domain: e.target.value }}))} disabled={status === "running"} />
+              <input type="text" className="cfg-input mono" placeholder="Tunnel UUID" value={appConfig.tunnel_mode.tunnel_id} onChange={e => setAppConfig(c => ({...c, tunnel_mode: { mode: "Named", tunnel_id: e.target.value, domain: (c.tunnel_mode as any).domain }}))} disabled={status === "running"} />
+              <input type="text" className="cfg-input mono" placeholder="example.com" value={appConfig.tunnel_mode.domain} onChange={e => setAppConfig(c => ({...c, tunnel_mode: { mode: "Named", tunnel_id: (c.tunnel_mode as any).tunnel_id, domain: e.target.value }}))} disabled={status === "running"} />
             </div>
           )}
 
           <div className="cfg-group">
             <span className="cfg-label">Target Port</span>
-            <input type="number" className="cfg-input" value={appConfig.port} onChange={e => setAppConfig(c => ({...c, port: parseInt(e.target.value) || 8080}))} disabled={status === "running"} />
+            <input type="number" className="cfg-input mono" value={appConfig.port} onChange={e => setAppConfig(c => ({...c, port: parseInt(e.target.value) || 8080}))} disabled={status === "running"} />
           </div>
 
           <div className="cfg-group">
-            <span className="cfg-label">Presets</span>
-            <div className="preset-row">
-              <button className="cfg-btn" onClick={() => setAppConfig(c => ({...c, port: 5173, hosting_type: { mode: "Custom" }}))} disabled={status === "running"}>React</button>
-              <button className="cfg-btn" onClick={() => setAppConfig(c => ({...c, port: 3000, hosting_type: { mode: "Custom" }}))} disabled={status === "running"}>Next.js</button>
-              <button className="cfg-btn" onClick={async () => {
+            <span className="cfg-label">Hosting Presets</span>
+            <div className="preset-chips">
+              <button className={`preset-chip ${appConfig.port === 5173 && appConfig.hosting_type.mode === "Custom" ? "active" : ""}`} onClick={() => setAppConfig(c => ({...c, port: 5173, hosting_type: { mode: "Custom" }}))} disabled={status === "running"}>
+                <svg className="preset-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                React
+              </button>
+              <button className={`preset-chip ${appConfig.port === 3000 && appConfig.hosting_type.mode === "Custom" ? "active" : ""}`} onClick={() => setAppConfig(c => ({...c, port: 3000, hosting_type: { mode: "Custom" }}))} disabled={status === "running"}>
+                <svg className="preset-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>
+                Next.js
+              </button>
+              <button className={`preset-chip ${appConfig.hosting_type.mode === "Website" ? "active" : ""}`} onClick={async () => {
                 const selected = await openDialog({ directory: true });
                 if (selected) {
                   setAppConfig(c => ({...c, hosting_type: { mode: "Website", folder: selected as string }, port: 8000 }));
                 }
               }} disabled={status === "running"}>
+                <svg className="preset-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
                 Static Folder
               </button>
             </div>
@@ -465,18 +474,30 @@ export default function App() {
             {/* Live card */}
             {status === "completed" && liveUrl && (
               <div className="live-card">
-                <div className="live-card-top">
-                  <span className="live-dot" />
-                  <span className="live-url">{liveUrl}</span>
-                  <button className="copy-btn" onClick={() => navigator.clipboard.writeText(liveUrl)}>
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                      <rect x="5" y="5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-                      <path d="M11 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v7a1 1 0 001 1h2" stroke="currentColor" strokeWidth="1.2"/>
-                    </svg>
-                    Copy
+                <div className="live-url-wrap">
+                  <div className="live-url-label">LIVE URL</div>
+                  <div className="live-url">{liveUrl}</div>
+                </div>
+                <div className="live-card-actions">
+                  <button className={`copy-btn ${copied ? "copied" : ""}`} onClick={() => {
+                    navigator.clipboard.writeText(liveUrl);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}>
+                    {copied ? "Copied!" : (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                          <rect x="5" y="5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                          <path d="M11 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v7a1 1 0 001 1h2" stroke="currentColor" strokeWidth="1.2"/>
+                        </svg>
+                        Copy URL
+                      </>
+                    )}
+                  </button>
+                  <button className="copy-btn secondary" onClick={() => window.open(liveUrl, "_blank")}>
+                    Open link
                   </button>
                 </div>
-                <div className="live-card-sub">Secure · Cloudflare · end-to-end encrypted</div>
               </div>
             )}
 
@@ -525,10 +546,10 @@ export default function App() {
             <div className={`logs-body ${logsOpen ? "logs-open" : ""}`}>
               {logsOpen
                 ? (filteredLogs.length === 0
-                  ? <div className="log-line log-sys">[{nowTs()}] [SYS] No logs yet</div>
+                  ? <div className="log-empty">No activity records found</div>
                   : filteredLogs.map((l: LogLine) => <LogRow key={l.id} log={l} />))
                 : lastTwoLogs.length === 0
-                  ? <div className="log-line log-sys">[{nowTs()}] [SYS] Waiting for events…</div>
+                  ? <div className="log-empty mini">Waiting for system events...</div>
                   : lastTwoLogs.map((l: LogLine) => <LogRow key={l.id} log={l} />)
               }
               <div ref={logsEndRef} />
@@ -551,12 +572,12 @@ function StepRow({ idx, meta, state, isLast }: {
       <div className="step-col">
         <div className={`step-node node-${status}`}>
           {status === "done" || status === "skip"
-            ? <svg width="9" height="9" viewBox="0 0 9 9"><polyline points="1,5 3.5,7.5 8,2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 8 9 4"/></svg>
             : status === "error"
-            ? <svg width="8" height="8" viewBox="0 0 8 8"><line x1="0" y1="0" x2="8" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><line x1="8" y1="0" x2="0" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="3" x2="9" y2="9"/><line x1="9" y1="3" x2="3" y2="9"/></svg>
             : status === "active"
-            ? null
-            : <span className="node-num">{idx}</span>
+            ? <div className="step-spinner" />
+            : <span className="node-num">{idx + 1}</span>
           }
         </div>
         {!isLast && <div className={`step-line ${status === "done" || status === "skip" ? "line-done" : "line-pend"}`} />}
@@ -603,12 +624,7 @@ function ActionButton({ status, onClick, activeStep }: { status: PipelineStatus;
   );
 }
 
-function StatusPill({ status }: { status: PipelineStatus }) {
-  const labels: Record<PipelineStatus, string> = {
-    idle: "IDLE", running: "RUNNING", error: "ERROR", completed: "LIVE", stopped: "IDLE",
-  };
-  return <div className={`status-pill pill-${status}`}><span className="pill-dot" />{labels[status]}</div>;
-}
+
 
 function ConnectingDots() {
   return (

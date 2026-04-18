@@ -69,10 +69,14 @@ pub async fn supervise(
         Ok(None) | Err(_) => {
             // Stream ended or timed out
             emit_err(&app, &session_id, "connecting", "TIMEOUT", "Timed out waiting for public URL (15s).", true);
-            
+
             // Auto kill tracking if we timeout
-            let state = app.state::<AppState>();
-            if let Ok(mut handle) = state.tunnel_child.try_lock() {
+            let tunnel_child = {
+                let state = app.state::<AppState>();
+                state.tunnel_child.clone()
+            };
+            let lock_result = tunnel_child.try_lock();
+            if let Ok(mut handle) = lock_result {
                 if let Some(mut child) = handle.take() {
                     let _ = child.kill().await;
                     let _ = child.wait().await;

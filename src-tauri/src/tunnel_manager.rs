@@ -178,8 +178,9 @@ pub async fn spawn_tunnel(
     exe_path: PathBuf,
     port: u16,
     tunnel_mode: &TunnelMode,
-    app: AppHandle,
 ) -> Result<Child, String> {
+    probe_cloudflared_binary(&exe_path).await?;
+
     let mut cmd = tokio::process::Command::new(exe_path);
 
     match tunnel_mode {
@@ -207,6 +208,22 @@ pub async fn spawn_tunnel(
     let child = cmd.spawn().map_err(|e| format!("Failed to start cloudflared: {}", e))?;
 
     Ok(child)
+}
+
+async fn probe_cloudflared_binary(exe_path: &Path) -> Result<(), String> {
+    let status = tokio::process::Command::new(exe_path)
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .await
+        .map_err(|e| format!("Cloudflared is not available or not executable: {}", e))?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err("Cloudflared version probe failed. Please reinstall cloudflared and try again.".to_string())
+    }
 }
 
 fn ts() -> u64 {
