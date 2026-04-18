@@ -32,6 +32,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_TARGET_DIR: C:\cargo-target
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'fkhost ${{ github.ref_name }}'
