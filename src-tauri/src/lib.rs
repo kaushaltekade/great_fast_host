@@ -149,8 +149,9 @@ async fn start_tunnel(app: AppHandle, state: State<'_, AppState>, session_id: St
     }
 
     let sid = session_id.clone();
+    let tunnel_mode = config.tunnel_mode.clone();
     tokio::spawn(async move {
-        watchdog::supervise(app, stderr, sid).await;
+        watchdog::supervise(app, stderr, sid, tunnel_mode).await;
     });
 
     Ok(())

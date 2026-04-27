@@ -183,10 +183,22 @@ All settings are saved automatically when you click **▶ Start Hosting**.
 ## 🧩 Tunnel Modes
 
 ### Quick *(default)*
-Uses `cloudflared tunnel --url http://localhost:<port>` to generate a random, temporary public URL like `https://abc123.trycloudflare.com`. No Cloudflare account required.
+Uses `cloudflared tunnel --url http://localhost:<port>` to generate a random, temporary public URL like `https://abc123.trycloudflare.com`. **No account or setup required.**
 
 ### Custom / Named
-Connects to your existing Cloudflare tunnel using a **Tunnel UUID** and a **custom domain** you own. Requires a Cloudflare account with a pre-created named tunnel.
+Connects to your existing Cloudflare tunnel and a **custom domain** (e.g., `app.yourdomain.com`).
+
+**How to set up:**
+1.  **Cloudflare Dashboard**: Go to [Zero Trust > Networks > Tunnels](https://one.dash.cloudflare.com/).
+2.  **Create Tunnel**: Create a new tunnel and install/authenticate it on your machine (`cloudflared login`).
+3.  **Public Hostname**: Add a hostname (e.g., `app.example.com`) pointing to `http://localhost:8080` (or your chosen port).
+4.  **In fkhost**: 
+    *   Switch **Tunnel Mode** to **Custom**.
+    *   Paste your **Tunnel ID** and **Domain**.
+    *   Click **Start Hosting**.
+
+> [!TIP]
+> Make sure your machine has the tunnel credentials file in the default directory (`~/.cloudflared/`). fkhost will use your local `cloudflared` session to run the named tunnel.
 
 <br/>
 
