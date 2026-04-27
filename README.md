@@ -14,7 +14,7 @@
 
 **Expose your local server to the internet in seconds. Zero configuration. Zero friction.**
 
-[![Version](https://img.shields.io/badge/version-0.4.1-6366f1?style=for-the-badge&logo=github)](https://github.com/kaushaltekade/great_fast_host)
+[![Version](https://img.shields.io/badge/version-0.5.1-6366f1?style=for-the-badge&logo=github)](https://github.com/kaushaltekade/great_fast_host)
 [![Built with Tauri](https://img.shields.io/badge/Tauri-2.x-ffc131?style=for-the-badge&logo=tauri)](https://tauri.app)
 [![Rust](https://img.shields.io/badge/Rust-Backend-ce4a27?style=for-the-badge&logo=rust)](https://rust-lang.org)
 [![React 19](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react)](https://react.dev)

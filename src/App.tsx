@@ -324,7 +324,7 @@ export default function App() {
           <div className="tb-title" data-tauri-drag-region>
             <span className="tb-status-dot" />
             {status === "running" ? `Hosting :${appConfig.port}` : "fkhost"}
-            <span className="tb-version">v0.4.1</span>
+            <span className="tb-version">v0.5.1</span>
           </div>
         </div>
         <div className="tb-right">
