@@ -154,7 +154,7 @@ Settings are persisted automatically to the OS app data directory via Tauri.
 {
   "version": 1,
   "hosting_type": { "mode": "Demo" },       // "Demo" | "Website" (+ folder) | "Custom"
-  "tunnel_mode":  { "mode": "Quick" },      // "Quick" | "Named" (+ tunnel_id, domain)
+  "tunnel_mode":  { "mode": "Quick" },      // "Quick" | "Named" (+ token, domain)
   "port": 8080
 }
 ```
@@ -188,17 +188,11 @@ Uses `cloudflared tunnel --url http://localhost:<port>` to generate a random, te
 ### Custom / Named
 Connects to your existing Cloudflare tunnel and a **custom domain** (e.g., `app.yourdomain.com`).
 
-**How to set up:**
-1.  **Cloudflare Dashboard**: Go to [Zero Trust > Networks > Tunnels](https://dash.cloudflare.com/).
-2.  **Create Tunnel**: Create a new tunnel and install/authenticate it on your machine (`cloudflared login`).
-3.  **Public Hostname**: Add a hostname (e.g., `app.example.com`) pointing to `http://localhost:8080` (or your chosen port).
-4.  **In fkhost**: 
-    *   Switch **Tunnel Mode** to **Custom**.
-    *   Paste your **Tunnel ID** and **Domain**.
-    *   Click **Start Hosting**.
-
-> [!TIP]
-> Make sure your machine has the tunnel credentials file in the default directory (`~/.cloudflared/`). fkhost will use your local `cloudflared` session to run the named tunnel.
+**Step-by-Step Setup:**
+1. **Create a Tunnel:** Go to your [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/) > **Networks** > **Tunnels**. Click **Add a tunnel**, choose **Cloudflared**, and name it.
+2. **Get the Token:** On the "Install and run a connector" page, copy *only* the long token string from the provided command (e.g., `eyJh...`).
+3. **Route Traffic:** Click **Next**. Add a **Public Hostname** (e.g., `app.yourdomain.com`) and point it to `http://localhost:8080` (or your chosen port). Save.
+4. **Start Hosting:** In fkhost, switch to **Custom** mode. Paste your **Token** and **Domain**, then click **Start Hosting**.
 
 <br/>
 
@@ -236,7 +230,7 @@ MIT © [Kaushal Tekade](https://github.com/kaushaltekade)
 
 <div align="center">
 
-**Built with using Tauri · Rust · React · TypeScript**
+**Built using Tauri · Rust · React · TypeScript**
 
 *tunnel hosting, zero friction*
 

@@ -187,8 +187,8 @@ pub async fn spawn_tunnel(
         TunnelMode::Quick => {
             cmd.args(["tunnel", "--url", &format!("http://localhost:{}", port)]);
         },
-        TunnelMode::Named { tunnel_id, domain: _ } => {
-            cmd.args(["tunnel", "run", tunnel_id]);
+        TunnelMode::Named { token, domain: _ } => {
+            cmd.args(["tunnel", "run", "--token", token]);
         }
     }
 

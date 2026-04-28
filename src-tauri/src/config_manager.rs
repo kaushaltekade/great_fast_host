@@ -14,7 +14,7 @@ pub enum HostingType {
 #[serde(tag = "mode")]
 pub enum TunnelMode {
     Quick,
-    Named { tunnel_id: String, domain: String },
+    Named { token: String, domain: String },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

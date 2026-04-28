@@ -66,7 +66,7 @@ type HostingType =
 
 type TunnelMode = 
   | { mode: "Quick" }
-  | { mode: "Named", tunnel_id: string, domain: string };
+  | { mode: "Named", token: string, domain: string };
 
 interface AppConfig {
   version: number;
@@ -290,8 +290,8 @@ export default function App() {
         setNotification({ type: "error", msg: "Please select a static folder to serve." });
         return;
       }
-      if (appConfig.tunnel_mode.mode === "Named" && (!appConfig.tunnel_mode.tunnel_id || !appConfig.tunnel_mode.domain)) {
-        setNotification({ type: "error", msg: "Tunnel ID and Domain are required for Custom mode." });
+      if (appConfig.tunnel_mode.mode === "Named" && (!appConfig.tunnel_mode.token || !appConfig.tunnel_mode.domain)) {
+        setNotification({ type: "error", msg: "Tunnel Token and Domain are required for Custom mode." });
         return;
       }
 
@@ -394,7 +394,7 @@ export default function App() {
               </button>
               <button 
                 className={appConfig.tunnel_mode.mode === "Named" ? "active" : ""} 
-                onClick={() => setAppConfig(c => ({...c, tunnel_mode: { mode: "Named", tunnel_id: "", domain: "" }}))}
+                onClick={() => setAppConfig(c => ({...c, tunnel_mode: { mode: "Named", token: "", domain: "" }}))}
                 disabled={status === "running"}
               >
                 Custom
@@ -409,8 +409,8 @@ export default function App() {
 
           {appConfig.tunnel_mode.mode === "Named" && (
             <div className="cfg-sub">
-              <input type="text" className="cfg-input mono" placeholder="Tunnel UUID" value={appConfig.tunnel_mode.tunnel_id} onChange={e => setAppConfig(c => ({...c, tunnel_mode: { mode: "Named", tunnel_id: e.target.value, domain: (c.tunnel_mode as any).domain }}))} disabled={status === "running"} />
-              <input type="text" className="cfg-input mono" placeholder="example.com" value={appConfig.tunnel_mode.domain} onChange={e => setAppConfig(c => ({...c, tunnel_mode: { mode: "Named", tunnel_id: (c.tunnel_mode as any).tunnel_id, domain: e.target.value }}))} disabled={status === "running"} />
+              <input type="text" className="cfg-input mono" placeholder="Tunnel Token" value={appConfig.tunnel_mode.token} onChange={e => setAppConfig(c => ({...c, tunnel_mode: { mode: "Named", token: e.target.value, domain: (c.tunnel_mode as any).domain }}))} disabled={status === "running"} />
+              <input type="text" className="cfg-input mono" placeholder="example.com" value={appConfig.tunnel_mode.domain} onChange={e => setAppConfig(c => ({...c, tunnel_mode: { mode: "Named", token: (c.tunnel_mode as any).token, domain: e.target.value }}))} disabled={status === "running"} />
             </div>
           )}
 
