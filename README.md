@@ -189,7 +189,7 @@ Uses `cloudflared tunnel --url http://localhost:<port>` to generate a random, te
 Connects to your existing Cloudflare tunnel and a **custom domain** (e.g., `app.yourdomain.com`).
 
 **How to set up:**
-1.  **Cloudflare Dashboard**: Go to [Zero Trust > Networks > Tunnels](https://one.dash.cloudflare.com/).
+1.  **Cloudflare Dashboard**: Go to [Zero Trust > Networks > Tunnels](https://dash.cloudflare.com/).
 2.  **Create Tunnel**: Create a new tunnel and install/authenticate it on your machine (`cloudflared login`).
 3.  **Public Hostname**: Add a hostname (e.g., `app.example.com`) pointing to `http://localhost:8080` (or your chosen port).
 4.  **In fkhost**: 
