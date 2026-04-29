@@ -186,13 +186,40 @@ All settings are saved automatically when you click **▶ Start Hosting**.
 Uses `cloudflared tunnel --url http://localhost:<port>` to generate a random, temporary public URL like `https://abc123.trycloudflare.com`. **No account or setup required.**
 
 ### Custom / Named
-Connects to your existing Cloudflare tunnel and a **custom domain** (e.g., `app.yourdomain.com`).
 
-**How to set up:**
-1. **Go to** [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) > **Networks** > **Tunnels** > **Add a tunnel**.
-2. **Copy** your **Tunnel Token** (the long `eyJh...` string inside the install command).
-3. **Route** your traffic by adding a Public Hostname (e.g. `app.example.com`) pointing to `localhost:8080`.
-4. **Paste** the Token and Domain into **fkhost** and click **Start Hosting**.
+Connects to your own **Cloudflare tunnel** and routes traffic through a **custom domain** (e.g., `app.yourdomain.com`). Requires a free Cloudflare account.
+
+**Step-by-step setup:**
+
+**Step 1 — Create a tunnel**
+1. Open [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) and sign in.
+2. Go to **Networks** → **Tunnels** → click **Add a tunnel**.
+3. Select **Cloudflared** as the connector type and click **Next**.
+4. Give your tunnel a name (e.g. `my-app`) and click **Save tunnel**.
+
+**Step 2 — Copy your Tunnel Token**
+1. On the next screen you'll see an install command — something like:
+   ```
+   cloudflared service install eyJhbGci...
+   ```
+2. **Copy the long token string** that starts with `eyJh` — that's your Tunnel Token.
+   > You can always find it later under **Networks → Tunnels → your tunnel → Configure → Overview**.
+
+**Step 3 — Add a public hostname (route)**
+1. In the tunnel configuration, click the **Routes** tab → **Add a route**.
+2. Select **Published application** (public hostname).
+3. Fill in:
+   - **Subdomain**: e.g. `app`
+   - **Domain**: choose your Cloudflare-managed domain (e.g. `yourdomain.com`)
+   - **Service → Type**: `HTTP`
+   - **Service → URL**: `localhost:8080` *(match the port you use in fkhost)*
+4. Click **Save hostname**.
+
+**Step 4 — Connect in fkhost**
+1. Switch fkhost to **Named** tunnel mode.
+2. Paste your **Tunnel Token** into the Token field.
+3. Enter your **custom domain** (e.g. `app.yourdomain.com`) into the Domain field.
+4. Click **▶ Start Hosting** — your custom domain will be live in seconds.
 
 <br/>
 
