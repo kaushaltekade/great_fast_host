@@ -188,11 +188,11 @@ Uses `cloudflared tunnel --url http://localhost:<port>` to generate a random, te
 ### Custom / Named
 Connects to your existing Cloudflare tunnel and a **custom domain** (e.g., `app.yourdomain.com`).
 
-**Step-by-Step Setup:**
-1. **Create a Tunnel:** Go to your [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/) > **Networks** > **Tunnels**. Click **Add a tunnel**, choose **Cloudflared**, and name it.
-2. **Get the Token:** On the "Install and run a connector" page, copy *only* the long token string from the provided command (e.g., `eyJh...`).
-3. **Route Traffic:** Click **Next**. Add a **Public Hostname** (e.g., `app.yourdomain.com`) and point it to `http://localhost:8080` (or your chosen port). Save.
-4. **Start Hosting:** In fkhost, switch to **Custom** mode. Paste your **Token** and **Domain**, then click **Start Hosting**.
+**How to set up:**
+1. **Go to** [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) > **Networks** > **Tunnels** > **Add a tunnel**.
+2. **Copy** your **Tunnel Token** (the long `eyJh...` string inside the install command).
+3. **Route** your traffic by adding a Public Hostname (e.g. `app.example.com`) pointing to `localhost:8080`.
+4. **Paste** the Token and Domain into **fkhost** and click **Start Hosting**.
 
 <br/>
 
