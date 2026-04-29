@@ -187,9 +187,30 @@ Uses `cloudflared tunnel --url http://localhost:<port>` to generate a random, te
 
 ### Custom / Named
 
-Connects to your own **Cloudflare tunnel** and routes traffic through a **custom domain** (e.g., `app.yourdomain.com`). Requires a free Cloudflare account.
+Connects to your own **Cloudflare tunnel** and routes traffic through a **custom domain** (e.g., `app.yourdomain.com`). Requires a free Cloudflare account and your domain pointed to Cloudflare's nameservers.
 
 **Step-by-step setup:**
+
+**Step 0 — Add your domain to Cloudflare** *(skip if your domain is already on Cloudflare)*
+
+If you bought your domain from Hostinger, Namecheap, GoDaddy, or any other registrar, you first need to point it at Cloudflare:
+
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → **Add a site** → enter your domain (e.g. `yourdomain.com`) → click **Continue**.
+2. Choose the **Free plan** → click **Continue**.
+3. Cloudflare scans your existing DNS. Review the records and click **Continue**.
+4. Cloudflare shows you **two nameservers**, e.g.:
+   ```
+   amelia.ns.cloudflare.com
+   bart.ns.cloudflare.com
+   ```
+5. Log in to your registrar (e.g. [Hostinger hPanel](https://hpanel.hostinger.com)) → find your domain → go to **DNS / Nameservers** → **Change nameservers**.
+6. **Replace** the current nameservers with the two Cloudflare ones above → **Save**.
+7. Back in Cloudflare, click **Done, check nameservers**. Propagation usually takes **5–30 minutes** (up to 48 h).
+8. Once Cloudflare shows the domain as **Active** ✅, you're ready to proceed.
+
+> **Hostinger shortcut:** hPanel → Domains → click your domain → **DNS / Nameservers** tab → select *"Use custom nameservers"* → paste both Cloudflare nameservers → Save.
+
+---
 
 **Step 1 — Create a tunnel**
 1. Open [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) and sign in.
